@@ -27,13 +27,19 @@ const client = new MongoClient(uri, {
 });
 async function run() {
   try {
-    const userCollection = client.db("sms-snaps-db").collection("users");
+    const usersCollection = client.db("sms-snaps-db").collection("users");
     const servicesCollection = client.db("sms-snaps-db").collection("services");
     const reviewCollection = client.db("sms-snaps-db").collection("reviews");
     app.get("/services", async (req, res) => {
       const query = {};
       const cursor = servicesCollection.find(query);
       const services = await cursor.toArray();
+      res.send(services);
+    });
+    app.get("/home/services", async (req, res) => {
+      const query = {};
+      const cursor = servicesCollection.find(query);
+      const services = await cursor.limit(3).toArray();
       res.send(services);
     });
     app.get("/services/service/:id", async (req, res) => {
@@ -45,9 +51,16 @@ async function run() {
     });
     app.get("/reviews", async (req, res) => {
       let query = {};
+      // for specific service
       if (req.query.title) {
         query = {
           title: req.query.title,
+        };
+      }
+      // for specific user
+      if (req.query.email) {
+        query = {
+          email: req.query.email,
         };
       }
       const cursor = reviewCollection.find(query);
