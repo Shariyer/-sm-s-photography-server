@@ -27,27 +27,32 @@ const client = new MongoClient(uri, {
 });
 async function run() {
   try {
+    // all db collections
     const usersCollection = client.db("sms-snaps-db").collection("users");
     const servicesCollection = client.db("sms-snaps-db").collection("services");
     const reviewCollection = client.db("sms-snaps-db").collection("reviews");
+    // getting all services
     app.get("/services", async (req, res) => {
       const query = {};
       const cursor = servicesCollection.find(query);
       const services = await cursor.toArray();
       res.send(services);
     });
+    // creating new service
     app.post("/services", async (req, res) => {
       const service = req.body;
       const result = await servicesCollection.insertOne(service);
 
       res.send(result);
     });
+    // getting 3 services for home
     app.get("/home/services", async (req, res) => {
       const query = {};
       const cursor = servicesCollection.find(query);
       const services = await cursor.limit(3).toArray();
       res.send(services);
     });
+    // getting single service
     app.get("/services/service/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
@@ -55,6 +60,7 @@ async function run() {
       const service = await cursor.toArray();
       res.send(service);
     });
+    // getting all reviews and queries
     app.get("/reviews", async (req, res) => {
       let query = {};
       // for specific service
@@ -73,12 +79,30 @@ async function run() {
       const reviews = await cursor.toArray();
       res.send(reviews);
     });
+    // adding user review
     app.post("/reviews", async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
 
       res.send(result);
     });
+    // updating user review
+    app.patch("/reviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedReviewText = req.body;
+      filter = { _id: ObjectId(id) };
+      // console.log(updatedReviewText);
+      // console.log(id);
+      const updatedReview = {
+        $set: {
+          reviewText: updatedReviewText.updatedReviewText,
+        },
+      };
+      const result = await reviewCollection.updateOne(filter, updatedReview);
+
+      res.send(result);
+    });
+    // deleting single review
     app.delete("/reviews/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
