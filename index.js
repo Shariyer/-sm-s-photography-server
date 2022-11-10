@@ -5,6 +5,8 @@ const express = require("express");
 const app = express();
 const port = process.env.PORT || 5000;
 const cors = require("cors");
+// requiring json web token
+const jwt = require("jsonwebtoken");
 
 // middleware setUp
 app.use(cors());
@@ -25,12 +27,41 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
+
+// jwt verification
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  // const token = authHeader.split(" ")[1];
+
+  // jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+  //   if (err) {
+  //     return res.status(403).send({ message: "Forbidden access" });
+  //   }
+  //   req.decoded = decoded;
+
+  // });
+  next();
+}
 async function run() {
   try {
     // all db collections
     const usersCollection = client.db("sms-snaps-db").collection("users");
     const servicesCollection = client.db("sms-snaps-db").collection("services");
     const reviewCollection = client.db("sms-snaps-db").collection("reviews");
+
+    // jwt
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1d",
+      });
+      res.send({ token });
+    });
     // getting all services
     app.get("/services", async (req, res) => {
       const query = {};
@@ -60,8 +91,8 @@ async function run() {
       const service = await cursor.toArray();
       res.send(service);
     });
-    // getting all reviews and queries
-    app.get("/reviews", async (req, res) => {
+    // getting all reviews and queries and jwt
+    app.get("/reviews", verifyJWT, async (req, res) => {
       let query = {};
       // for specific service
       if (req.query.title) {
@@ -79,15 +110,15 @@ async function run() {
       const reviews = await cursor.toArray();
       res.send(reviews);
     });
-    // adding user review
+    // adding user review and jwt
     app.post("/reviews", async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
 
       res.send(result);
     });
-    // updating user review
-    app.patch("/reviews/:id", async (req, res) => {
+    // updating user review and jwt
+    app.patch("/reviews/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const updatedReviewText = req.body;
       filter = { _id: ObjectId(id) };
@@ -102,8 +133,8 @@ async function run() {
 
       res.send(result);
     });
-    // deleting single review
-    app.delete("/reviews/:id", async (req, res) => {
+    // deleting single review and jwt
+    app.delete("/reviews/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await reviewCollection.deleteOne(filter);
