@@ -99,16 +99,19 @@ async function run() {
         query = {
           title: req.query.title,
         };
+        const cursor = reviewCollection.find(query).sort({ date: -1 });
+        const reviews = await cursor.toArray();
+        res.send(reviews);
       }
       // for specific user
       if (req.query.email) {
         query = {
           email: req.query.email,
         };
+        const cursor = reviewCollection.find(query);
+        const reviews = await cursor.toArray();
+        res.send(reviews);
       }
-      const cursor = reviewCollection.find(query);
-      const reviews = await cursor.toArray();
-      res.send(reviews);
     });
     // adding user review and jwt
     app.post("/reviews", async (req, res) => {
